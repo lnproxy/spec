@@ -18,5 +18,3 @@ Then, once the user verifies the amount and hash in the relay's invoice, the use
 ### Accounting for routing fees
 
 ### Setting the `min_final_cltv_expiry`
-
-### Interoperability with `lnurl`
