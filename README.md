@@ -1,5 +1,5 @@
-WIP: lnproxy base spec.
-=======================
+WIP: lnproxy spec.
+==================
 
 `author: lnproxy` `author: niteshbalusu11` `discussion: https://github.com/niteshbalusu11/lnproxy-ts/issues/2`
 
