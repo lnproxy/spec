@@ -11,10 +11,34 @@ Then, once the user verifies the amount and payment hash, the user can use the p
 
 ## Requesting and verifying a proxy invoice
 
-1. User...
+1. User make a POST request to a relay like:
+   ```Bash
+   curl --header "Content-Type: application/json" \
+       --request POST \
+       --data '{"invoice":"<bolt11 invoice>"}' \
+       <relay URL>
+   ```
+2. User gets a JSON response from the relay of form:
+   ```Typescript
+   {
+     "proxy_invoice": string // bech32-serialized lightning invoice
+   }
+   ```
+   or
+   ```JSON
+    {"status":"ERROR", "reason":"error details..."}
+    ```
+
+3. User verifies that the payment hash in the proxy invoice matches the payment hash in the original invoice.
+
+4. User verifies that the amount in the proxy invoice exceeds the amount in the original invoice by an acceptably small amount.
+
+5. User uses the proxy invoice in place of the original invoice to send or receive a payment.
 
 ## Notes on implementing an lnproxy relay
 
 ### Accounting for routing fees
 
 ### Setting the `min_final_cltv_expiry`
+
+### Features
