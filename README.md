@@ -11,7 +11,7 @@ Then, once the user verifies the amount and payment hash, the user can use the p
 
 ## Requesting and verifying a proxy invoice
 
-1. User make a POST request to a relay like:
+1. User makes a POST request to a relay like:
    ```Bash
    curl --header "Content-Type: application/json" \
        --request POST \
@@ -29,16 +29,54 @@ Then, once the user verifies the amount and payment hash, the user can use the p
     {"status":"ERROR", "reason":"error details..."}
     ```
 
-3. User verifies that the payment hash in the proxy invoice matches the payment hash in the original invoice.
+3. User verifies that the payment hash (tag `p`) in the proxy invoice matches the payment hash in the original invoice.
 
-4. User verifies that the amount in the proxy invoice exceeds the amount in the original invoice by an acceptably small amount.
+4. User verifies that the description (tag `d`) or description hash (tag `h`) in the proxy invoice matches the description or description hash in the original invoice.
 
-5. User uses the proxy invoice in place of the original invoice to send or receive a payment.
+5. User verifies that the amount in the proxy invoice exceeds the amount in the original invoice by an acceptably small amount.
+
+6. User uses the proxy invoice in place of the original invoice to send or receive a payment.
+
+## Requesting a proxy invoice with a different description
+
+A user may want to generate a proxy invoice with a different description (tag `d`) or description hash (tag `h`) than the original invoice.  In this case, the flow is the same as above except steps 1 and 4 which become:
+
+  1. User makes a POST request to a relay like:
+     ```Bash
+     curl --header "Content-Type: application/json" \
+         --request POST \
+         --data '{"invoice":"<bolt11 invoice>","description":"<new description>"}' \
+         <relay URL>
+     ```
+     or
+     ```Bash
+     curl --header "Content-Type: application/json" \
+         --request POST \
+         --data '{"invoice":"<bolt11 invoice>","description_hash":"<new description hash>"}' \
+         <relay URL>
+     ```
+and:
+
+  4. User verifies that the description (tag `d`) or description hash (tag `h`) in the proxy invoice matches provided description or description hash provided in the request.
+
+## Notes on compatibility with LNURL
+
+In order for an lnproxy relay to be used in conjunction with [LUD-06](https://github.com/lnurl/luds/blob/luds/06.md), the amount in the proxy invoice needs to be set by the user.  To accomodate this, a relay accept an additional parameter `routing_msat` that specifies the millisatoshi amount the relay should use when routing the payment.  In this case, the flow is the same as above except steps 1 and 5 which become:
+
+
+  1. User makes a POST request to a relay like:
+     ```Bash
+     curl --header "Content-Type: application/json" \
+         --request POST \
+         --data '{"invoice":"<bolt11 invoice>","routing_msat":"<millisatoshi amount used when routing the payment>"}' \
+         <relay URL>
+     ```
+and:
+
+  5. User verifies that the amount in the proxy invoice is exactly equal to the sum of the amount in the original invoice and the amount in the `routing_msat` request.
 
 ## Notes on implementing an lnproxy relay
 
-### Accounting for routing fees
-
 ### Setting the `min_final_cltv_expiry`
 
-### Features
+### Atomic multi-path payments
