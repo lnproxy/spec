@@ -1,5 +1,5 @@
-WIP: lnproxy spec.
-==================
+draft: lnproxy spec.
+====================
 
 `author: lnproxy` `author: niteshbalusu11` `discussion: https://github.com/niteshbalusu11/lnproxy-ts/issues/2`
 
@@ -59,16 +59,16 @@ and:
 
   4. User verifies that the description (tag `d`) or description hash (tag `h`) in the proxy invoice matches provided description or description hash provided in the request.
 
-## Notes on compatibility with LNURL
+## Compatibility with LNURL
 
-In order for an lnproxy relay to be used in conjunction with [LUD-06](https://github.com/lnurl/luds/blob/luds/06.md), the amount in the proxy invoice needs to be set by the user.  To accomodate this, a relay accept an additional parameter `routing_msat` that specifies the millisatoshi amount the relay should use when routing the payment.  In this case, the flow is the same as above except steps 1 and 5 which become:
+In order for an lnproxy relay to be used in conjunction with [LUD-06](https://github.com/lnurl/luds/blob/luds/06.md), the amount in the proxy invoice needs to be set by the user.  To accomodate this, a relay may accept an additional parameter `routing_msat` that specifies the millisatoshi amount the relay should use when routing the payment.  In this case, the flow is the same as above except steps 1 and 5 which become:
 
 
   1. User makes a POST request to a relay like:
      ```Bash
      curl --header "Content-Type: application/json" \
          --request POST \
-         --data '{"invoice":"<bolt11 invoice>","routing_msat":"<millisatoshi amount used when routing the payment>"}' \
+         --data '{"invoice":"<bolt11 invoice>","routing_msat":"<millisatoshi amount used when routing the payment, as a string>"}' \
          <relay URL>
      ```
 and:
@@ -77,6 +77,12 @@ and:
 
 ## Notes on implementing an lnproxy relay
 
+Proxy invoices are hodl invoices. When an lnproxy relay accepts an htlc for a proxy invoice, it immediately pays the original invoice and uses the revealed preimage to settle the proxy invoice. This can expose the relay to certain risks if the following topics are not accounted for.
+
 ### Setting the `min_final_cltv_expiry`
 
+An lnproxy relay needs to ensure that payments to the original invoice expire before payments to the proxy invoice.  Otherwise, an attacker could simply wait for the payment to the proxy invoice to expire before settling the payment from the relay.  This means that the `min_final_cltv_expiry` in a proxy invoice needs be longer than the entire route needed to pay the original invoice.
+
 ### Atomic multi-path payments
+
+Relays cannot create proxy invoices for AMP invoices since there is not payment_hash reveal mechanism.
