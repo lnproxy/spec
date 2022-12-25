@@ -61,8 +61,7 @@ and:
 
 ## Compatibility with LNURL
 
-For an lnproxy relay to be used in conjunction with [LUD-06](https://github.com/lnurl/luds/blob/luds/06.md), the amount in the proxy invoice needs to be set by the user.  To accommodate this, a relay may accept an additional parameter `routing_msat` that specifies the millisatoshi amount the relay should use when routing the payment.  In this case, the flow is the same as above except steps 1 and 5 which become:
-
+For an lnproxy relay to be used in conjunction with [LUD-06](https://github.com/lnurl/luds/blob/luds/06.md), the amount in the proxy invoice needs to be set by the user.  To accommodate this, a relay may accept an additional parameter `routing_msat` that specifies the millisatoshi amount the relay should use when routing the payment.  Note that the user is responsible for ensuring that the amount in `routing_msat` is enough to pay for the costs of routing the payment; otherwise, the payment will fail.  The flow is the same as above except steps 1 and 5 which become:
 
   1. User makes a POST request to a relay like:
      ```Bash
