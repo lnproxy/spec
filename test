@@ -1,0 +1,142 @@
+#!/usr/local/plan9/bin/rc -e
+. 9.rc
+privkey=e126f68f7eafcc8b74f54d269fe206be715000f94dac067d1c04a8ca3b2db734
+pubkey=03e7156ae33b0a208d0744199163177e909e80176e55d97a2f221ede0f934dd9ad
+bolt11=./vendor/github.com/rustyrussell/lightning-payencode/lightning-address.py
+post_request=(curl -s --header ''''Content-Type: application/json'''' --request POST --data)
+
+fn preimage { head -c 32 /dev/urandom }
+fn to_hex { hexdump -v -e '1/1 "%02x"' }
+fn hash_to_hex { sha256sum | awk '{print $1}' }
+
+if (! ~ $#*  1) {
+	echo usage: $0 '<relay-url>'
+	exit 1
+}
+
+hash=`{preimage | hash_to_hex}
+original_invoice=`{$bolt11 encode --description=test 0.00001 $hash $privkey}
+proxy_invoice=`{$post_request  '{"invoice":"'^$"original_invoice^'"}' $1 | jq -r '.proxy_invoice'}
+comm <{$bolt11 decode $original_invoice | sort} <{$bolt11 decode $proxy_invoice | sort} |
+awk '
+	/^	?(Payment hash|Currency|Description)/ {
+		printf "[ERROR] plain invoice: %s does not match\n", $1
+		errors += 1
+	}
+	/^		Signed with public key/ {
+		print "[ERROR] plain invoice: destination is not proxied"
+		errors += 1
+	}
+	END {
+		if (erros == 0) {
+			print "[PASSED] plain invoice"
+		}
+	}
+'
+
+hash=`{preimage | hash_to_hex}
+original_invoice=`{$bolt11 encode --no-amount 0 --description=test $hash $privkey}
+proxy_invoice=`{$post_request  '{"invoice":"'^$"original_invoice^'"}' $1 | jq -r '.proxy_invoice'}
+comm <{$bolt11 decode $original_invoice | sort} <{$bolt11 decode $proxy_invoice | sort} |
+awk '
+	/^	?(Payment hash|Currency|Description)/ {
+		printf "[ERROR] no-amount invoice: %s does not match\n", $1
+		errors += 1
+	}
+	/^		Signed with public key/ {
+		print "[ERROR] no-amount invoice: destination is not proxied"
+		errors += 1
+	}
+	END {
+		if (erros == 0) {
+			print "[PASSED] no-amount invoice"
+		}
+	}
+'
+
+hash=`{preimage | hash_to_hex}
+original_invoice=`{$bolt11 encode --description=test 0.00001 $hash $privkey}
+proxy_invoice=`{$post_request  '{"invoice":"'^$"original_invoice^'", "description":"custom"}' $1 | jq -r '.proxy_invoice'}
+comm <{$bolt11 decode $original_invoice | sort} <{$bolt11 decode $proxy_invoice | sort} |
+awk -F ': ' '
+	BEGIN {errors = 1}
+	/^	?(Payment hash|Currency)/ {
+		printf "[ERROR] custom description: %s does not match\n", $1
+		errors += 1
+	}
+	/^		Description/ {
+		print "[ERROR] custom description: description not changed"
+		errors += 1
+	}
+	/^	Description:/ && $2 != "custom" {
+		print "[ERROR] custom description: description does not match request"
+		errors += 1
+	}
+	/^		Signed with public key/ {
+		print "[ERROR] custom description: destination is not proxied"
+		errors += 1
+	}
+	END {
+		if (erros == 0) {
+			print "[PASSED] custom description"
+		}
+	}
+'
+
+hash=`{preimage | hash_to_hex}
+original_invoice=`{$bolt11 encode --description=test 0.00001 $hash $privkey}
+proxy_invoice=`{$post_request  '{"invoice":"'^$"original_invoice^'", "description_hash":"6cdfd271da635d491e37a2b4a1044b306e6e9e039aeadee95bb355efadf8cb33"}' $1 | jq -r '.proxy_invoice'}
+comm <{$bolt11 decode $original_invoice | sort} <{$bolt11 decode $proxy_invoice | sort} |
+awk -F ': ' '
+	BEGIN {errors = 1}
+	/^	?(Payment hash|Currency)/ {
+		printf "[ERROR] custom description hash: %s does not match\n", $1
+		errors += 1
+	}
+	/^		Description/ {
+		print "[ERROR] custom description hash: description not changed"
+		errors += 1
+	}
+	/^	Description:/ && $2 != "6cdfd271da635d491e37a2b4a1044b306e6e9e039aeadee95bb355efadf8cb33" {
+		print "[ERROR] custom description hash: description hash does not match request"
+		errors += 1
+	}
+	/^		Signed with public key/ {
+		print "[ERROR] custom description hash: destination is not proxied"
+		errors += 1
+	}
+	END {
+		if (erros == 0) {
+			print "[PASSED] custom description hash"
+		}
+	}
+'
+
+hash=`{preimage | hash_to_hex}
+original_invoice=`{$bolt11 encode --description=test 0.00001 $hash $privkey}
+proxy_invoice=`{$post_request  '{"invoice":"'^$"original_invoice^'", "routing_msat":"100000"}' $1 | jq -r '.proxy_invoice'}
+comm <{$bolt11 decode $original_invoice | sort} <{$bolt11 decode $proxy_invoice | sort} |
+awk -F ': ' '
+	BEGIN {errors = 1}
+	/^	?(Payment hash|Currency|Description)/ {
+		printf "[ERROR] custom routing budget: %s does not match\n", $1
+		errors += 1
+	}
+	/^		Amount/ {
+		print "[ERROR] custom routing budget: routing budget not changed"
+		errors += 1
+	}
+	/^	Amount:/ && $2 != "0.000011" {
+		print "[ERROR] custom routing budget: routing budget does not match request"
+		errors += 1
+	}
+	/^		Signed with public key/ {
+		print "[ERROR] custom routing budget: destination is not proxied"
+		errors += 1
+	}
+	END {
+		if (erros == 0) {
+			print "[PASSED] custom routing budget"
+		}
+	}
+'
