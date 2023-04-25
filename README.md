@@ -52,7 +52,7 @@ A user may want to generate a proxy invoice with a different description (tag `d
      ```Bash
      curl --header "Content-Type: application/json" \
          --request POST \
-         --data '{"invoice":"<bolt11 invoice>","description_hash":"<new description hash>"}' \
+         --data '{"invoice":"<bolt11 invoice>","description_hash":"<new description hash as 32 bytes of hex>"}' \
          <relay URL>
      ```
 and:
