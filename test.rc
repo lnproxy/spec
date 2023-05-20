@@ -18,7 +18,7 @@ hash=`{preimage | hash_to_hex}
 original_invoice=`{$bolt11 encode --description=test 0.00001 $hash $privkey}
 proxy_invoice=`{$post_request  '{"invoice":"'^$"original_invoice^'"}' $1 | jq -r '.proxy_invoice'}
 comm <{$bolt11 decode $original_invoice | sort} <{$bolt11 decode $proxy_invoice | sort} |
-awk '
+awk -F':' '
 	/^	?(Payment hash|Currency|Description)/ {
 		printf "[ERROR] plain invoice: %s does not match\n", $1
 		errors += 1
@@ -27,8 +27,11 @@ awk '
 		print "[ERROR] plain invoice: destination is not proxied"
 		errors += 1
 	}
+	/^	min_final_cltv_expiry_delta/ && ($2 <= 18 || $2 > 2015) {
+		print "[WARN] plain invoice: strange min_final_cltv_expiry_delta:", $2
+	}
 	END {
-		if (erros == 0) {
+		if (errors == 0) {
 			print "[PASSED] plain invoice"
 		}
 	}
@@ -38,7 +41,7 @@ hash=`{preimage | hash_to_hex}
 original_invoice=`{$bolt11 encode --no-amount 0 --description=test $hash $privkey}
 proxy_invoice=`{$post_request  '{"invoice":"'^$"original_invoice^'"}' $1 | jq -r '.proxy_invoice'}
 comm <{$bolt11 decode $original_invoice | sort} <{$bolt11 decode $proxy_invoice | sort} |
-awk '
+awk -F':' '
 	/^	?(Payment hash|Currency|Description)/ {
 		printf "[ERROR] no-amount invoice: %s does not match\n", $1
 		errors += 1
@@ -47,8 +50,11 @@ awk '
 		print "[ERROR] no-amount invoice: destination is not proxied"
 		errors += 1
 	}
+	/^	min_final_cltv_expiry_delta/ && ($2 <= 18 || $2 > 2015) {
+		print "[WARN] plain invoice: strange min_final_cltv_expiry_delta:", $2
+	}
 	END {
-		if (erros == 0) {
+		if (errors == 0) {
 			print "[PASSED] no-amount invoice"
 		}
 	}
@@ -72,12 +78,18 @@ awk -F ': ' '
 		print "[ERROR] custom description: description does not match request"
 		errors += 1
 	}
+	/^	Description:/ && $2 == "custom" {
+		errors -= 1
+	}
+	/^	min_final_cltv_expiry_delta/ && ($2 <= 18 || $2 > 2015) {
+		print "[WARN] plain invoice: strange min_final_cltv_expiry_delta:", $2
+	}
 	/^		Signed with public key/ {
 		print "[ERROR] custom description: destination is not proxied"
 		errors += 1
 	}
 	END {
-		if (erros == 0) {
+		if (errors == 0) {
 			print "[PASSED] custom description"
 		}
 	}
@@ -101,12 +113,18 @@ awk -F ': ' '
 		print "[ERROR] custom description hash: description hash does not match request"
 		errors += 1
 	}
+	/^	Description:/ && $2 == "6cdfd271da635d491e37a2b4a1044b306e6e9e039aeadee95bb355efadf8cb33" {
+		errors -= 1
+	}
 	/^		Signed with public key/ {
 		print "[ERROR] custom description hash: destination is not proxied"
 		errors += 1
 	}
+	/^	min_final_cltv_expiry_delta/ && ($2 <= 18 || $2 > 2015) {
+		print "[WARN] plain invoice: strange min_final_cltv_expiry_delta:", $2
+	}
 	END {
-		if (erros == 0) {
+		if (errors == 0) {
 			print "[PASSED] custom description hash"
 		}
 	}
@@ -130,12 +148,18 @@ awk -F ': ' '
 		print "[ERROR] custom routing budget: routing budget does not match request"
 		errors += 1
 	}
+	/^	Amount:/ && $2 == "0.000011" {
+		errors -= 1
+	}
 	/^		Signed with public key/ {
 		print "[ERROR] custom routing budget: destination is not proxied"
 		errors += 1
 	}
+	/^	min_final_cltv_expiry_delta/ && ($2 <= 18 || $2 > 2015) {
+		print "[WARN] plain invoice: strange min_final_cltv_expiry_delta:", $2
+	}
 	END {
-		if (erros == 0) {
+		if (errors == 0) {
 			print "[PASSED] custom routing budget"
 		}
 	}
