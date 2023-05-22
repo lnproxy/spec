@@ -18,6 +18,8 @@ Then, once the user verifies the amount and payment hash, the user can use the p
        --data '{"invoice":"<bolt11 invoice>"}' \
        <relay URL>
    ```
+   The invoice must specify an amount, otherwise the relay to take the entire payment.
+
 2. User gets a JSON response from the relay of form:
    ```Typescript
    {
