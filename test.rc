@@ -38,29 +38,6 @@ awk -F':' '
 '
 
 hash=`{preimage | hash_to_hex}
-original_invoice=`{$bolt11 encode --no-amount 0 --description=test $hash $privkey}
-proxy_invoice=`{$post_request  '{"invoice":"'^$"original_invoice^'"}' $1 | jq -r '.proxy_invoice'}
-comm <{$bolt11 decode $original_invoice | sort} <{$bolt11 decode $proxy_invoice | sort} |
-awk -F':' '
-	/^	?(Payment hash|Currency|Description)/ {
-		printf "[ERROR] no-amount invoice: %s does not match\n", $1
-		errors += 1
-	}
-	/^		Signed with public key/ {
-		print "[ERROR] no-amount invoice: destination is not proxied"
-		errors += 1
-	}
-	/^	min_final_cltv_expiry_delta/ && ($2 <= 18 || $2 > 2015) {
-		print "[WARN] plain invoice: strange min_final_cltv_expiry_delta:", $2
-	}
-	END {
-		if (errors == 0) {
-			print "[PASSED] no-amount invoice"
-		}
-	}
-'
-
-hash=`{preimage | hash_to_hex}
 original_invoice=`{$bolt11 encode --description=test 0.00001 $hash $privkey}
 proxy_invoice=`{$post_request  '{"invoice":"'^$"original_invoice^'", "description":"custom"}' $1 | jq -r '.proxy_invoice'}
 comm <{$bolt11 decode $original_invoice | sort} <{$bolt11 decode $proxy_invoice | sort} |
@@ -164,3 +141,11 @@ awk -F ': ' '
 		}
 	}
 '
+
+hash=`{preimage | hash_to_hex}
+original_invoice=`{$bolt11 encode --no-amount 0 --description=test $hash $privkey}
+relay_status=`{$post_request  '{"invoice":"'^$"original_invoice^'"}' $1 | jq -r '.status'}
+if (~ $relay_status ERROR)
+	echo '[PASSED] rejected no-amount invoice'
+if not
+	echo '[ERROR] accepted no-amount invoice'
